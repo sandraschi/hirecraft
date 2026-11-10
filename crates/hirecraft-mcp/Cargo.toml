@@ -1,0 +1,25 @@
+[package]
+name = "hirecraft-mcp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "CLI and Stdio MCP server for HireCraft"
+
+[[bin]]
+name = "hirecraft"
+path = "src/main.rs"
+
+[dependencies]
+hirecraft-store = { path = "../hirecraft-store" }
+hirecraft-core = { path = "../hirecraft-core" }
+craft-biz = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+clap = { workspace = true }
+thiserror = { workspace = true }
+
+[lints]
+workspace = true

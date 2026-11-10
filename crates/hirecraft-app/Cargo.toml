@@ -1,0 +1,27 @@
+[package]
+name = "hirecraft-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Native egui desktop application for HireCraft"
+
+[[bin]]
+name = "hirecraft-app"
+path = "src/main.rs"
+
+[dependencies]
+hirecraft-store = { path = "../hirecraft-store" }
+hirecraft-core = { path = "../hirecraft-core" }
+craft-biz = { workspace = true }
+craft-biz-ui = { workspace = true }
+eframe = { workspace = true }
+egui = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+clap = { workspace = true }
+
+[lints]
+workspace = true
