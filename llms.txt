@@ -1,0 +1,5 @@
+# HireCraft
+
+> Local-first sovereign Applicant Tracking System (ATS), blind scorecard interview pipeline, and employee onboarding engine in pure Rust.
+
+- [Full LLM Reference](llms-full.txt): Comprehensive tools, architecture, and configuration documentation.

@@ -1,0 +1,30 @@
+# HireCraft — Full Technical & LLM Reference
+
+## Architecture Overview
+
+HireCraft is a local-first applicant tracking system and onboarding automation engine built in pure Rust. It enforces `#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)]` across all crates:
+
+- `hirecraft-store`: SQLite transaction layer with job requisitions, candidate profiles, and immutable interview scorecards.
+- `hirecraft-core`: Structured recruiting stage pipeline, blind scorecard aggregation, and onboarding cascade event dispatchers.
+- `hirecraft-mcp`: Stdio JSON-RPC FastMCP server & CLI binary (`hirecraft`).
+- `hirecraft-app`: Native desktop GUI executable (`hirecraft-app`) via `egui 0.37`.
+
+## MCP Tools Reference
+
+1. `hire_status`: Retrieves high-level recruiting metrics (open requisitions, active candidate pipeline, offers, hires).
+2. `hire_req_create`: Creates a new job requisition with target department, headcount, and salary bands.
+3. `hire_req_list`: Lists all active and closed job requisitions.
+4. `hire_candidate_create`: Registers a candidate in the `applied` stage.
+5. `hire_candidate_show`: Retrieves detailed candidate history, current stage, and scorecards.
+6. `hire_candidate_stage`: Transitions a candidate through the pipeline (`applied`, `screening`, `interview`, `offer`, `hired`, `rejected`).
+7. `hire_candidate_hire`: Sets candidate stage to `hired`, captures agreed salary, and triggers automated fleet onboarding cascade.
+8. `hire_scorecard_add`: Records an interviewer's blind scorecard rating (1–5 scale).
+
+## Configuration & Environment Variables
+
+- `HIRECRAFT_DB`: Path to SQLite database file (default: `%LOCALAPPDATA%\hirecraft\hirecraft.db`).
+- `CRAFT_BUS_DIR`: Root directory of atomic event bus (default: `%LOCALAPPDATA%\craft-biz-bus`).
+
+## Event Bus Protocol
+
+- Outbox emissions: `candidate.hired` (emitted simultaneously to `contractcraft`, `teamcraft`, and `assetcraft`).
