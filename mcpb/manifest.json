@@ -1,0 +1,41 @@
+{
+  "manifest_version": "0.2",
+  "name": "hirecraft",
+  "display_name": "HireCraft",
+  "version": "__VERSION__",
+  "description": "Native egui desktop application for HireCraft",
+  "author": {
+    "name": "Sandra Schipal",
+    "url": "https://github.com/sandraschi"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sandraschi/hirecraft"
+  },
+  "license": "MIT OR Apache-2.0",
+  "server": {
+    "type": "binary",
+    "entry_point": "hirecraft.exe",
+    "mcp_config": {
+      "command": "${__dirname}/hirecraft.exe",
+      "args": [
+        "mcp"
+      ]
+    }
+  },
+  "compatibility": {
+    "platforms": [
+      "win32"
+    ]
+  },
+  "tools": [
+    {
+      "name": "hire_stats",
+      "description": "Get recruiting totals"
+    },
+    {
+      "name": "candidate_list",
+      "description": "List candidates"
+    }
+  ]
+}
