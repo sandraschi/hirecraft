@@ -73,6 +73,8 @@ enum Commands {
         notes: String,
     },
     Stats,
+    /// Fill an empty file with the labelled Northwind Traders hiring desk.
+    DemoSeed,
     Tools,
     Mcp,
 }
@@ -232,6 +234,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Stats => {
             let s = service.store().stats()?;
             println!("{}", serde_json::to_string_pretty(&s)?);
+        }
+        Commands::DemoSeed => {
+            let n = service.store().seed_northwind_demo()?;
+            println!("Loaded {n} labelled Northwind Traders demo candidates.");
         }
         Commands::Tools => {
             print_tools_catalog();

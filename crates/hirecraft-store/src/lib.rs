@@ -429,6 +429,58 @@ impl HireStore {
             hired_count,
         })
     }
+
+    /// Labelled Northwind Traders hiring desk. Refuses a file that already has candidates.
+    /// Nobody is hired, so the seed does not write a bus event.
+    pub fn seed_northwind_demo(&self) -> Result<usize, HireStoreError> {
+        if !self.list_candidates(None)?.is_empty() {
+            return Err(HireStoreError::Validation(
+                "Northwind demo loads only into an empty hiring file".into(),
+            ));
+        }
+        let note = Some("DEMO. Northwind Traders sample. Not a real person.");
+        self.create_req(
+            "NW-SALES",
+            "Sales representative",
+            "Sales",
+            1,
+            42_000,
+            58_000,
+        )?;
+        self.create_req("NW-WH", "Warehouse clerk", "Warehouse", 2, 32_000, 40_000)?;
+        self.create_candidate(
+            "NW-MARG",
+            "NW-SALES",
+            "Margaret Peacock",
+            "margaret@demo.northwind.example",
+            note,
+        )?;
+        self.update_candidate_stage("NW-MARG", CandidateStage::Interview, None)?;
+        self.add_scorecard(
+            "NW-MARG",
+            "Andrew Fuller",
+            4,
+            5,
+            "hire",
+            "DEMO scorecard for the Northwind sample.",
+        )?;
+        self.create_candidate(
+            "NW-ANNE",
+            "NW-SALES",
+            "Anne Dodsworth",
+            "anne@demo.northwind.example",
+            note,
+        )?;
+        self.create_candidate(
+            "NW-LAURA",
+            "NW-WH",
+            "Laura Callahan",
+            "laura@demo.northwind.example",
+            note,
+        )?;
+        self.update_candidate_stage("NW-LAURA", CandidateStage::Offer, Some(36_000))?;
+        Ok(3)
+    }
 }
 
 #[cfg(test)]
@@ -492,6 +544,25 @@ mod tests {
         let candidate = store.get_candidate("CAND-01").map_err(|e| e.to_string())?;
         if candidate.scorecard_avg != 0.0 {
             return Err(format!("average moved to {}", candidate.scorecard_avg));
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn northwind_demo_fills_an_empty_file_once() -> Result<(), String> {
+        let store = HireStore::open_in_memory().map_err(|e| e.to_string())?;
+        let n = store.seed_northwind_demo().map_err(|e| e.to_string())?;
+        if n != 3 {
+            return Err(format!("expected 3 candidates, got {n}"));
+        }
+        if store.seed_northwind_demo().is_ok() {
+            return Err("a second demo load should fail".into());
+        }
+        let laura = store.get_candidate("NW-LAURA").map_err(|e| e.to_string())?;
+        if laura.stage != CandidateStage::Offer {
+            return Err(
+                "Laura Callahan should be at offer, and the demo must not hire anyone".into(),
+            );
         }
         Ok(())
     }
