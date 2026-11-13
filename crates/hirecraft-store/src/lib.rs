@@ -16,6 +16,8 @@ pub enum HireStoreError {
     Json(#[from] serde_json::Error),
     #[error("Not found: {0}")]
     NotFound(String),
+    #[error("Validation error: {0}")]
+    Validation(String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -278,7 +280,10 @@ impl HireStore {
             .ok_or_else(|| HireStoreError::NotFound(id.to_string()))
     }
 
-    pub fn list_candidates(&self, stage: Option<CandidateStage>) -> Result<Vec<Candidate>, HireStoreError> {
+    pub fn list_candidates(
+        &self,
+        stage: Option<CandidateStage>,
+    ) -> Result<Vec<Candidate>, HireStoreError> {
         let mut sql = "SELECT id, req_id, name, email, stage, scorecard_avg, offered_salary_eur, notes, created_at FROM candidates".to_string();
         if stage.is_some() {
             sql.push_str(" WHERE stage = ?1");
@@ -301,7 +306,12 @@ impl HireStore {
         Ok(out)
     }
 
-    pub fn update_candidate_stage(&self, id: &str, stage: CandidateStage, offered_salary_eur: Option<i64>) -> Result<(), HireStoreError> {
+    pub fn update_candidate_stage(
+        &self,
+        id: &str,
+        stage: CandidateStage,
+        offered_salary_eur: Option<i64>,
+    ) -> Result<(), HireStoreError> {
         let rows = if let Some(sal) = offered_salary_eur {
             self.conn.execute(
                 "UPDATE candidates SET stage = ?1, offered_salary_eur = ?2 WHERE id = ?3",
@@ -350,6 +360,11 @@ impl HireStore {
         recommendation: &str,
         notes: &str,
     ) -> Result<Scorecard, HireStoreError> {
+        if !(1..=5).contains(&technical_score) || !(1..=5).contains(&culture_score) {
+            return Err(HireStoreError::Validation(
+                "scorecard scores must be in 1..=5".into(),
+            ));
+        }
         let sc_id = format!("SC-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0));
         let sc = Scorecard {
             id: sc_id,
@@ -380,8 +395,12 @@ impl HireStore {
     }
 
     pub fn stats(&self) -> Result<HireStats, HireStoreError> {
-        let mut req_stmt = self.conn.prepare("SELECT COUNT(*) FROM job_requisitions WHERE status = 'open'")?;
-        let open_reqs: usize = req_stmt.query_row([], |row| row.get::<_, i64>(0)).unwrap_or(0) as usize;
+        let mut req_stmt = self
+            .conn
+            .prepare("SELECT COUNT(*) FROM job_requisitions WHERE status = 'open'")?;
+        let open_reqs: usize = req_stmt
+            .query_row([], |row| row.get::<_, i64>(0))
+            .unwrap_or(0) as usize;
 
         let mut cand_stmt = self.conn.prepare(
             "SELECT 
@@ -392,14 +411,15 @@ impl HireStore {
              FROM candidates",
         )?;
 
-        let (total_candidates, interviewing_count, offer_count, hired_count) = cand_stmt.query_row([], |row| {
-            Ok((
-                row.get::<_, i64>(0)? as usize,
-                row.get::<_, i64>(1)? as usize,
-                row.get::<_, i64>(2)? as usize,
-                row.get::<_, i64>(3)? as usize,
-            ))
-        })?;
+        let (total_candidates, interviewing_count, offer_count, hired_count) = cand_stmt
+            .query_row([], |row| {
+                Ok((
+                    row.get::<_, i64>(0)? as usize,
+                    row.get::<_, i64>(1)? as usize,
+                    row.get::<_, i64>(2)? as usize,
+                    row.get::<_, i64>(3)? as usize,
+                ))
+            })?;
 
         Ok(HireStats {
             open_reqs,
@@ -418,19 +438,60 @@ mod tests {
     #[test]
     fn test_recruiting_pipeline() {
         let store = HireStore::open_in_memory().unwrap();
-        let req = store.create_req("REQ-01", "Rust Engineer", "Core", 1, 75000, 95000).unwrap();
+        let req = store
+            .create_req("REQ-01", "Rust Engineer", "Core", 1, 75000, 95000)
+            .unwrap();
         assert_eq!(req.status, "open");
 
-        let cand = store.create_candidate("CAND-01", "REQ-01", "Jane Doe", "jane@example.com", None).unwrap();
+        let cand = store
+            .create_candidate("CAND-01", "REQ-01", "Jane Doe", "jane@example.com", None)
+            .unwrap();
         assert_eq!(cand.stage, CandidateStage::Applied);
 
-        store.add_scorecard("CAND-01", "Lead Dev", 5, 4, "strong_hire", "Excellent architecture knowledge").unwrap();
+        store
+            .add_scorecard(
+                "CAND-01",
+                "Lead Dev",
+                5,
+                4,
+                "strong_hire",
+                "Excellent architecture knowledge",
+            )
+            .unwrap();
         let updated = store.get_candidate("CAND-01").unwrap();
         assert_eq!(updated.scorecard_avg, 4.5);
 
-        store.update_candidate_stage("CAND-01", CandidateStage::Hired, Some(88000)).unwrap();
+        store
+            .update_candidate_stage("CAND-01", CandidateStage::Hired, Some(88000))
+            .unwrap();
         let hired = store.get_candidate("CAND-01").unwrap();
         assert_eq!(hired.stage, CandidateStage::Hired);
         assert_eq!(hired.offered_salary_eur, Some(88000));
+    }
+
+    #[test]
+    fn scorecard_refuses_scores_outside_one_to_five() -> Result<(), String> {
+        let store = HireStore::open_in_memory().map_err(|e| e.to_string())?;
+        store
+            .create_req("REQ-01", "Rust Engineer", "Core", 1, 75000, 95000)
+            .map_err(|e| e.to_string())?;
+        store
+            .create_candidate("CAND-01", "REQ-01", "Jane Doe", "jane@example.com", None)
+            .map_err(|e| e.to_string())?;
+        match store.add_scorecard("CAND-01", "Lead Dev", 6, 4, "strong_hire", "too high") {
+            Err(HireStoreError::Validation(_)) => {}
+            Ok(_) => return Err("score 6 was stored".into()),
+            Err(other) => return Err(other.to_string()),
+        }
+        match store.add_scorecard("CAND-01", "Lead Dev", 0, 4, "no_hire", "too low") {
+            Err(HireStoreError::Validation(_)) => {}
+            Ok(_) => return Err("score 0 was stored".into()),
+            Err(other) => return Err(other.to_string()),
+        }
+        let candidate = store.get_candidate("CAND-01").map_err(|e| e.to_string())?;
+        if candidate.scorecard_avg != 0.0 {
+            return Err(format!("average moved to {}", candidate.scorecard_avg));
+        }
+        Ok(())
     }
 }

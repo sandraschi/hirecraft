@@ -10,7 +10,12 @@ use std::io::{self, BufRead, Write};
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "hirecraft", author, version, about = "Local-first ATS & recruiting pipeline engine. CLI + MCP.")]
+#[command(
+    name = "hirecraft",
+    author,
+    version,
+    about = "Local-first ATS & recruiting pipeline engine. CLI + MCP."
+)]
 struct Cli {
     #[arg(long)]
     db: Option<PathBuf>,
@@ -105,7 +110,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let service = HireService::new(store, bus);
 
     let Some(cmd) = cli.command else {
-        println!("HireCraft — Local-first ATS & recruiting pipeline engine. Use --help for subcommands.");
+        println!(
+            "HireCraft — Local-first ATS & recruiting pipeline engine. Use --help for subcommands."
+        );
         return Ok(());
     };
 
@@ -118,19 +125,51 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("Offers Out: {}", s.offer_count);
             println!("Hired: {}", s.hired_count);
         }
-        Commands::ReqCreate { id, title, department, headcount, min_salary, max_salary } => {
-            let req = service.store().create_req(&id, &title, &department, headcount, min_salary, max_salary)?;
-            println!("Created job requisition {} ({}) in {}", req.id, req.title, req.department);
+        Commands::ReqCreate {
+            id,
+            title,
+            department,
+            headcount,
+            min_salary,
+            max_salary,
+        } => {
+            let req = service.store().create_req(
+                &id,
+                &title,
+                &department,
+                headcount,
+                min_salary,
+                max_salary,
+            )?;
+            println!(
+                "Created job requisition {} ({}) in {}",
+                req.id, req.title, req.department
+            );
         }
         Commands::ReqList => {
             let reqs = service.store().list_reqs()?;
             for r in reqs {
-                println!("{:12} {:30} {:14} €{}-€{}", r.id, r.title, r.department, r.salary_min_eur, r.salary_max_eur);
+                println!(
+                    "{:12} {:30} {:14} €{}-€{}",
+                    r.id, r.title, r.department, r.salary_min_eur, r.salary_max_eur
+                );
             }
         }
-        Commands::CandCreate { id, req_id, name, email, notes } => {
-            let cand = service.store().create_candidate(&id, &req_id, &name, &email, notes.as_deref())?;
-            println!("Created candidate {} ({}) for req {}", cand.id, cand.name, cand.req_id);
+        Commands::CandCreate {
+            id,
+            req_id,
+            name,
+            email,
+            notes,
+        } => {
+            let cand =
+                service
+                    .store()
+                    .create_candidate(&id, &req_id, &name, &email, notes.as_deref())?;
+            println!(
+                "Created candidate {} ({}) for req {}",
+                cand.id, cand.name, cand.req_id
+            );
         }
         Commands::CandShow { id } => {
             let c = service.store().get_candidate(&id)?;
@@ -147,7 +186,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let filter = stage.as_deref().and_then(CandidateStage::from_str_opt);
             let candidates = service.store().list_candidates(filter)?;
             for c in candidates {
-                println!("{:10} {:20} {:12} Score: {:.1} Stage: {}", c.id, c.name, c.req_id, c.scorecard_avg, c.stage.as_str());
+                println!(
+                    "{:10} {:20} {:12} Score: {:.1} Stage: {}",
+                    c.id,
+                    c.name,
+                    c.req_id,
+                    c.scorecard_avg,
+                    c.stage.as_str()
+                );
             }
         }
         Commands::CandStage { id, stage, salary } => {
@@ -157,11 +203,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::CandHire { id, salary } => {
             let cand = service.hire_candidate(&id, salary)?;
-            println!("Hired candidate {} ({}) at €{}. Automated onboarding cascade emitted!", cand.id, cand.name, salary);
+            println!(
+                "Hired candidate {} ({}) at €{}. Automated onboarding cascade emitted!",
+                cand.id, cand.name, salary
+            );
         }
-        Commands::ScorecardAdd { candidate_id, interviewer, technical, culture, recommendation, notes } => {
-            let sc = service.store().add_scorecard(&candidate_id, &interviewer, technical, culture, &recommendation, &notes)?;
-            println!("Added scorecard {} for candidate {}. Tech: {}/5, Culture: {}/5", sc.id, candidate_id, sc.technical_score, sc.culture_score);
+        Commands::ScorecardAdd {
+            candidate_id,
+            interviewer,
+            technical,
+            culture,
+            recommendation,
+            notes,
+        } => {
+            let sc = service.store().add_scorecard(
+                &candidate_id,
+                &interviewer,
+                technical,
+                culture,
+                &recommendation,
+                &notes,
+            )?;
+            println!(
+                "Added scorecard {} for candidate {}. Tech: {}/5, Culture: {}/5",
+                sc.id, candidate_id, sc.technical_score, sc.culture_score
+            );
         }
         Commands::Stats => {
             let s = service.store().stats()?;
@@ -190,7 +256,10 @@ fn print_tools_catalog() {
         { "name": "candidate_hire", "description": "Hire candidate and trigger cross-fleet onboarding cascade" },
         { "name": "scorecard_add", "description": "Add interviewer evaluation scorecard" }
     ]);
-    println!("{}", serde_json::to_string_pretty(&catalog).unwrap_or_default());
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&catalog).unwrap_or_default()
+    );
 }
 
 fn run_mcp_server(service: HireService) -> Result<(), Box<dyn std::error::Error>> {
@@ -239,14 +308,21 @@ fn run_mcp_server(service: HireService) -> Result<(), Box<dyn std::error::Error>
                 stdout.flush()?;
             }
             "tools/call" => {
-                let tool_name = req.get("params").and_then(|p| p.get("name")).and_then(|n| n.as_str()).unwrap_or("");
+                let tool_name = req
+                    .get("params")
+                    .and_then(|p| p.get("name"))
+                    .and_then(|n| n.as_str())
+                    .unwrap_or("");
                 let result_json = match tool_name {
                     "hire_stats" => {
                         let st = service.store().stats().map_err(|e| e.to_string())?;
                         json!(st)
                     }
                     "candidate_list" => {
-                        let cands = service.store().list_candidates(None).map_err(|e| e.to_string())?;
+                        let cands = service
+                            .store()
+                            .list_candidates(None)
+                            .map_err(|e| e.to_string())?;
                         json!(cands)
                     }
                     _ => json!({ "status": "unknown tool" }),

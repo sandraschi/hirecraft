@@ -1,5 +1,10 @@
 # HireCraft 🎯
 
+![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)
+![Rust 1.90+](https://img.shields.io/badge/rust-1.90%2B-orange?logo=rust)
+![MCP stdio](https://img.shields.io/badge/MCP-stdio-purple)
+![ArtCraft harness](https://img.shields.io/badge/ArtCraft-harness-green)
+
 **Local-first sovereign Applicant Tracking System (ATS), blind scorecard interview pipeline, and automated employee onboarding engine.**
 
 Part of the Sovereign Back-Office Suite replacing SaaS spend with zero-cloud-dependency, instant, offline-capable Rust native applications.

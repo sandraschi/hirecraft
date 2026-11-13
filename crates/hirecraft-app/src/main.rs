@@ -3,12 +3,17 @@
 #![deny(clippy::panic)]
 
 use clap::Parser;
+use craft_biz_ui::bookend::{self, Bar, Spec};
+use craft_biz_ui::menu::Item;
 use eframe::egui::{self, Color32, RichText};
 use hirecraft_core::*;
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
-#[command(name = "hirecraft-app", about = "Native egui desktop host for HireCraft")]
+#[command(
+    name = "hirecraft-app",
+    about = "Native egui desktop host for HireCraft"
+)]
 struct Args {
     #[arg(long)]
     smoke: bool,
@@ -34,13 +39,20 @@ fn resolve_db(path: Option<PathBuf>) -> PathBuf {
 fn run_smoke_checks() -> Result<(), Box<dyn std::error::Error>> {
     let store = HireStore::open_in_memory()?;
     let req = store.create_req("REQ-SMOKE", "Smoke Engineer", "QA", 1, 60000, 80000)?;
-    let cand = store.create_candidate("CAND-SMOKE", &req.id, "Smoke Candidate", "smoke@test.at", None)?;
+    let cand = store.create_candidate(
+        "CAND-SMOKE",
+        &req.id,
+        "Smoke Candidate",
+        "smoke@test.at",
+        None,
+    )?;
     store.add_scorecard(&cand.id, "Interviewer", 5, 5, "strong_hire", "Perfect fit")?;
     store.update_candidate_stage(&cand.id, CandidateStage::Hired, Some(75000))?;
     let hired = store.get_candidate(&cand.id)?;
     if hired.stage != CandidateStage::Hired {
         return Err("Candidate stage update failed".into());
     }
+    bookend::smoke("HireCraft", env!("CARGO_PKG_VERSION"), "hiring")?;
     println!("smoke: ok (hirecraft-app)");
     Ok(())
 }
@@ -76,6 +88,9 @@ struct HireApp {
     stats: HireStats,
     selected_candidate: Option<String>,
     hire_salary_input: i64,
+    bar: Bar,
+    dark: bool,
+    zoom: f32,
 }
 
 impl HireApp {
@@ -94,6 +109,35 @@ impl HireApp {
             stats,
             selected_candidate: None,
             hire_salary_input: 75000,
+            bar: Bar::new(),
+            dark: true,
+            zoom: 1.0,
+        }
+    }
+
+    fn paint_menu(&mut self, ui: &mut egui::Ui) {
+        let docs = bookend::repo_docs(env!("CARGO_MANIFEST_DIR"));
+        let spec = Spec {
+            name: "HireCraft",
+            version: env!("CARGO_PKG_VERSION"),
+            description: "Candidates, scorecards, and the hire cascade.",
+            repository: "https://github.com/sandraschi/hirecraft",
+            docs: &docs,
+            dark: self.dark,
+            zoom: self.zoom,
+            file: vec![Item::action("Refresh", "app.refresh")],
+            view: Vec::new(),
+            middle: Vec::new(),
+        };
+        let change = self.bar.show(ui, &spec);
+        if let Some(dark) = change.dark {
+            self.dark = dark;
+        }
+        if let Some(zoom) = change.zoom {
+            self.zoom = zoom;
+        }
+        if change.action.as_deref() == Some("app.refresh") {
+            self.refresh();
         }
     }
 
@@ -109,10 +153,17 @@ impl HireApp {
 
 impl eframe::App for HireApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.paint_menu(ui);
         ui.horizontal(|ui| {
-            ui.heading(RichText::new("👥 HireCraft").strong().color(Color32::from_rgb(155, 89, 182)));
+            ui.heading(
+                RichText::new("👥 HireCraft")
+                    .strong()
+                    .color(Color32::from_rgb(155, 89, 182)),
+            );
             ui.separator();
-            ui.label(RichText::new("Sovereign ATS, Candidate Pipeline & Onboarding Handshake").weak());
+            ui.label(
+                RichText::new("Sovereign ATS, Candidate Pipeline & Onboarding Handshake").weak(),
+            );
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if ui.button("🔄 Refresh").clicked() {
                     self.refresh();
@@ -125,13 +176,25 @@ impl eframe::App for HireApp {
         ui.horizontal(|ui| {
             ui.label(RichText::new(format!("Open Reqs: {}", self.stats.open_reqs)).strong());
             ui.separator();
-            ui.label(RichText::new(format!("Total Pipeline: {}", self.stats.total_candidates)).color(Color32::from_rgb(52, 152, 219)));
+            ui.label(
+                RichText::new(format!("Total Pipeline: {}", self.stats.total_candidates))
+                    .color(Color32::from_rgb(52, 152, 219)),
+            );
             ui.separator();
-            ui.label(RichText::new(format!("Interviewing: {}", self.stats.interviewing_count)).color(Color32::from_rgb(241, 196, 15)));
+            ui.label(
+                RichText::new(format!("Interviewing: {}", self.stats.interviewing_count))
+                    .color(Color32::from_rgb(241, 196, 15)),
+            );
             ui.separator();
-            ui.label(RichText::new(format!("Offers Out: {}", self.stats.offer_count)).color(Color32::from_rgb(230, 126, 34)));
+            ui.label(
+                RichText::new(format!("Offers Out: {}", self.stats.offer_count))
+                    .color(Color32::from_rgb(230, 126, 34)),
+            );
             ui.separator();
-            ui.label(RichText::new(format!("Hired: {}", self.stats.hired_count)).color(Color32::from_rgb(46, 204, 113)));
+            ui.label(
+                RichText::new(format!("Hired: {}", self.stats.hired_count))
+                    .color(Color32::from_rgb(46, 204, 113)),
+            );
         });
         ui.separator();
 
