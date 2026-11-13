@@ -275,7 +275,7 @@ impl HireStore {
              FROM candidates WHERE id = ?1",
         )?;
 
-        stmt.query_row(params![id], |row| Self::row_to_candidate(row))
+        stmt.query_row(params![id], Self::row_to_candidate)
             .optional()?
             .ok_or_else(|| HireStoreError::NotFound(id.to_string()))
     }
@@ -436,16 +436,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_recruiting_pipeline() {
-        let store = HireStore::open_in_memory().unwrap();
+    fn test_recruiting_pipeline() -> Result<(), String> {
+        let store = HireStore::open_in_memory().map_err(|e| e.to_string())?;
         let req = store
             .create_req("REQ-01", "Rust Engineer", "Core", 1, 75000, 95000)
-            .unwrap();
+            .map_err(|e| e.to_string())?;
         assert_eq!(req.status, "open");
 
         let cand = store
             .create_candidate("CAND-01", "REQ-01", "Jane Doe", "jane@example.com", None)
-            .unwrap();
+            .map_err(|e| e.to_string())?;
         assert_eq!(cand.stage, CandidateStage::Applied);
 
         store
@@ -457,16 +457,17 @@ mod tests {
                 "strong_hire",
                 "Excellent architecture knowledge",
             )
-            .unwrap();
-        let updated = store.get_candidate("CAND-01").unwrap();
+            .map_err(|e| e.to_string())?;
+        let updated = store.get_candidate("CAND-01").map_err(|e| e.to_string())?;
         assert_eq!(updated.scorecard_avg, 4.5);
 
         store
             .update_candidate_stage("CAND-01", CandidateStage::Hired, Some(88000))
-            .unwrap();
-        let hired = store.get_candidate("CAND-01").unwrap();
+            .map_err(|e| e.to_string())?;
+        let hired = store.get_candidate("CAND-01").map_err(|e| e.to_string())?;
         assert_eq!(hired.stage, CandidateStage::Hired);
         assert_eq!(hired.offered_salary_eur, Some(88000));
+        Ok(())
     }
 
     #[test]
