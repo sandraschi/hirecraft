@@ -5,6 +5,13 @@ All notable changes to `hirecraft` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-11-16
+
+### Changed
+- Docs only. HireCraft keeps the candidate pane. Employee cards will live in TeamCraft. Spec: `mcp-central-docs/projects/setupcraft/PRD.md`.
+- The hire event is specified to grow a chosen start date, position, and work text from the requisition. Offered gross will be stored on the TeamCraft card as monthly gross, with no tax calculation. The running payload is still `candidate_id`, `name`, `email`, `req_id`, `salary_eur`, `azg_weekly_cap` 38.5, `annual_leave_days` 25.
+- Downstream drains that already exist: TeamCraft opens a thin employee and drops the wage; ContractCraft opens a draft employment contract; AssetCraft records an equipment reminder and does not invent an asset.
+
 ## [Unreleased] - 2026-11-13
 
 ### Added
