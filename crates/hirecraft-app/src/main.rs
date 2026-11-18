@@ -100,6 +100,7 @@ struct HireApp {
     notice: String,
     bar: Bar,
     dark: bool,
+    lang_de: bool,
     zoom: f32,
     req_id: String,
     req_title: String,
@@ -130,6 +131,7 @@ impl HireApp {
             notice: String::new(),
             bar: Bar::new(),
             dark: true,
+            lang_de: false,
             zoom: 1.0,
             req_id: String::new(),
             req_title: String::new(),
@@ -162,9 +164,13 @@ impl HireApp {
             docs: &docs,
             dark: self.dark,
             zoom: self.zoom,
+            lang_de: self.lang_de,
             file: vec![
-                Item::action("Load Northwind demo", "app.demo"),
-                Item::action("Refresh", "app.refresh"),
+                Item::action(
+                    bookend::t(self.lang_de, "Northwind-Demo laden", "Load Northwind demo"),
+                    "app.demo",
+                ),
+                Item::action(bookend::t(self.lang_de, "Aktualisieren", "Refresh"), "app.refresh"),
             ],
             view: Vec::new(),
             middle: Vec::new(),
@@ -175,6 +181,9 @@ impl HireApp {
         }
         if let Some(zoom) = change.zoom {
             self.zoom = zoom;
+        }
+        if let Some(lang_de) = change.lang_de {
+            self.lang_de = lang_de;
         }
         match change.action.as_deref() {
             Some("app.refresh") => {
@@ -343,7 +352,7 @@ impl HireApp {
 
     fn paint_detail(&mut self, ui: &mut egui::Ui) {
         let Some(id) = self.selected.clone() else {
-            ui.heading("Candidate");
+            ui.heading(bookend::t(self.lang_de, "Bewerber", "Candidate"));
             ui.label("Add or open a candidate. Hire writes the cascade to contract, team, and asset inboxes.");
             return;
         };
@@ -460,7 +469,7 @@ impl eframe::App for HireApp {
         ui.horizontal(|ui| {
             ui.vertical(|ui| {
                 ui.set_min_width(560.0);
-                ui.heading("New requisition");
+                ui.heading(bookend::t(self.lang_de, "Neue Stelle", "New requisition"));
                 ui.horizontal(|ui| {
                     field(ui, "Id", &mut self.req_id, 80.0);
                     field(ui, "Title", &mut self.req_title, 140.0);
@@ -475,7 +484,7 @@ impl eframe::App for HireApp {
                     }
                 });
                 ui.add_space(4.0);
-                ui.heading("New candidate");
+                ui.heading(bookend::t(self.lang_de, "Neuer Bewerber", "New candidate"));
                 ui.horizontal(|ui| {
                     field(ui, "Id", &mut self.cand_id, 80.0);
                     field(ui, "Req", &mut self.cand_req, 80.0);
@@ -491,7 +500,7 @@ impl eframe::App for HireApp {
                     }
                 });
                 ui.add_space(6.0);
-                ui.heading("Candidates");
+                ui.heading(bookend::t(self.lang_de, "Bewerber", "Candidates"));
                 if self.candidates.is_empty() {
                     ui.label("No candidates yet. Add one, or load the Northwind Traders desk.");
                 }
@@ -526,7 +535,7 @@ impl eframe::App for HireApp {
                                 }
                             });
                     });
-                ui.heading("Open requisitions");
+                ui.heading(bookend::t(self.lang_de, "Offene Stellen", "Open requisitions"));
                 for r in &self.reqs {
                     ui.label(format!(
                         "{}  {}  {}  {} seats  {}-{} EUR",
